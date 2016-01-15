@@ -1,13 +1,13 @@
 var 
 	//Parse JSON file into global config object
-	config = require('./config.json'),
-	express = require('express'),
-	app = express(),
-	twilio = require('twilio'),  
-	twilioClient = require('twilio')(config.twilio_sid, config.twilio_auth_token), 
-	bodyParser = require('body-parser'), 
-	child_process = require('child_process')
-;
+	config 		= require('./config.json'),
+	logger 		= require('./logger.js'),
+	express 	= require('express'),
+	app 		= express(),
+	twilio 		= require('twilio'),  
+	twilioClient= require('twilio')(config.twilio_sid, config.twilio_auth_token), 
+	bodyParser 	= require('body-parser'), 
+	child_process = require('child_process');
 
 /**
  * Extend the array primitive to allow returning of a random element
@@ -16,7 +16,7 @@ var
  */
 Array.prototype.random = function(){
 	return this[Math.floor(Math.random() * this.length)]; 
-} 
+};
 
 /**
  * Parses passed environment variable to determine which port to listen on
@@ -54,7 +54,7 @@ function start(){
 
 	//Listen on the correct port for the given environment
 	app.listen(app.get('port'), function(){
-		console.log('Super Catfacts Attack Service running on ' + app.get('port')); 
+		logger.info('Super Catfacts Attack Service running on ' + app.get('port')); 
 	}); 
 }
 
@@ -120,7 +120,7 @@ app.post('/incoming-sms', function(req, res){
 	//If target is currently under attack and is not an admin - and they text this number - give them a particular text response
 	if (isTargetBeingAttacked(requestor) && !isAuthorizedUser(requestor)){
 
-		sendResponseSMS(requestor, 'Command not recognized. We will upgrade your CatFacts account to send you facts more frequently. Thanks for choosing CatFacts!');
+		sendResponseSMS(requestor, 'Ok! Upgrading your CatFacts account meow to send you facts more frequently. Call us meow to learn more!');
 
 	} else if (!isAuthorizedUser(requestor)){
 		//Do nothing and do not respond if requestor is unauthorized
@@ -147,6 +147,7 @@ app.post('/incoming-sms', function(req, res){
 
 		//Give Twilio a successful response for logging purposes
 		res.status(200).send('Finished processing POST request to /incoming-sms');
+		logger.info('New incoming SMS from' + requestor + ' payload');
 	}
 }); 
 
@@ -160,6 +161,7 @@ app.post('/incoming-sms', function(req, res){
 app.post('/incoming-call', function(req, res){
 	res.writeHead(200, { 'Content-Type': 'text/xml' }); 
 	res.end(generateCallResponseTwiml().toString()); 
+	logger.info('New call coming in!');
 }); 
 
 /**
@@ -266,7 +268,7 @@ function generateCallResponseTwiml() {
 		.say("If for some fur-brained reason you would like to unsubscribe from fantastic hourly cat facts, please press 3 3 3 3 4 6 7 8 9 3 1 2 6 in order right now", {
 			voice: 'man', 
 			language: 'en'
-		})
+		});
 	}); 
 
 	return response; 
@@ -279,7 +281,7 @@ function generateCallResponseTwiml() {
  * @return {[type]}      [description]
  */
 function sendResponseSMS(to, body) {
-	console.log('sendResponseSMS ' + config.catfacts_number);
+	logger.info('sendResponseSMS ' + config.catfacts_number);
 	twilioClient.sendSms({
 	    to: to, 
 	    from: config.catfacts_number, 
@@ -331,7 +333,7 @@ handleAdminAttackRequest = function(requesting_admin, target) {
 			}
 		}); 
 	}
-}
+};
 
 /**
  * Adds given child_process to the app-level array of running attacks so it can be terminated later
@@ -344,7 +346,7 @@ beginTrackingAttack = function(child_process) {
 	var currentAttacks = app.get('activeAttacks');
 	currentAttacks.push(child_process);  
 	app.set('activeAttacks', currentAttacks); 
-}
+};
 
 /**
  * Finds a currently running attack by phone number and terminates it in response to an admin stop attack request
@@ -366,7 +368,7 @@ handleAdminStopRequest = function(requesting_admin, target_number) {
 		foundAttack.kill(); 
 		sendResponseSMS(requesting_admin, 'Successfully terminated CatFacts Attack on ' + target_number);
 	}
-}
+};
 
 /**
  * Helper method that determines whether or not a supplied number is currently under attack
@@ -387,4 +389,4 @@ isTargetBeingAttacked = function(target) {
 		}
 	}); 
 	return targetIsBeingAttacked; 
-}
+};
